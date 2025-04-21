@@ -10,98 +10,101 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v2
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
-    - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@v1
-      with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: ${{ secrets.AWS_REGION || 'us-east-1' }}
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION != '' && secrets.AWS_REGION || 'us-east-1' }}
 
-    - name: Verify AWS credentials
-      run: |
-        echo "Verifying AWS credentials..."
-        aws sts get-caller-identity
-        echo "AWS credentials verified successfully!"
+      - name: Verify AWS credentials
+        run: |
+          echo "Verifying AWS credentials..."
+          aws sts get-caller-identity
+          echo "AWS credentials verified successfully!"
 
-    - name: Check and handle existing stack
-      run: |
-        echo "Checking CloudFormation stack status..."
-        if aws cloudformation describe-stacks --stack-name cakeshop-saas 2>&1 | grep -q "ROLLBACK_COMPLETE"; then
-          echo "Stack is in ROLLBACK_COMPLETE state. Deleting stack..."
-          aws cloudformation delete-stack --stack-name cakeshop-saas
-          echo "Waiting for stack deletion to complete..."
-          aws cloudformation wait stack-delete-complete --stack-name cakeshop-saas || true
-          echo "Stack deleted successfully."
-        elif aws cloudformation describe-stacks --stack-name cakeshop-saas 2>&1 | grep -q "does not exist"; then
-          echo "Stack does not exist. Will create new stack."
-        else
-          echo "Stack exists and is in a valid state."
-        fi
+      - name: Handle existing CloudFormation stack
+        run: |
+          echo "Checking CloudFormation stack status..."
+          if aws cloudformation describe-stacks --stack-name cakeshop-saas 2>&1 | grep -q "ROLLBACK_COMPLETE"; then
+            echo "Stack is in ROLLBACK_COMPLETE state. Deleting stack..."
+            aws cloudformation delete-stack --stack-name cakeshop-saas
+            echo "Waiting for stack deletion to complete..."
+            aws cloudformation wait stack-delete-complete --stack-name cakeshop-saas || true
+            echo "Stack deleted successfully."
+          elif aws cloudformation describe-stacks --stack-name cakeshop-saas 2>&1 | grep -q "does not exist"; then
+            echo "Stack does not exist. Ready to create a new one."
+          else
+            echo "Stack exists and is in a valid state."
+          fi
 
-    - name: Validate CloudFormation template
-      run: |
-        echo "Validating CloudFormation template..."
-        aws cloudformation validate-template --template-body file://aws-config/ec2-template.yaml
-        echo "Template validation successful!"
+      - name: Validate CloudFormation template
+        run: |
+          echo "Validating CloudFormation template..."
+          aws cloudformation validate-template --template-body file://aws-config/ec2-template.yaml
+          echo "Template validation successful!"
 
-    - name: Deploy CloudFormation stack
-      run: |
-        echo "Deploying CloudFormation stack..."
-        aws cloudformation deploy \
-          --template-file aws-config/ec2-template.yaml \
-          --stack-name cakeshop-saas \
-          --parameter-overrides \
-            KeyName=${{ secrets.AWS_KEY_PAIR_NAME }} \
-            DBHost=${{ secrets.AWS_RDS_ENDPOINT }} \
-            DBName=cakeshop \
-            DBUser=${{ secrets.AWS_RDS_USERNAME }} \
-            DBPassword=${{ secrets.AWS_RDS_PASSWORD }} \
-            RedisHost="none" \
-            S3Bucket="cakeshop-media-$(date +%s)" \
-          --capabilities CAPABILITY_IAM \
-          --no-fail-on-empty-changeset
+      - name: Deploy CloudFormation stack
+        run: |
+          echo "Deploying CloudFormation stack..."
+          aws cloudformation deploy \
+            --template-file aws-config/ec2-template.yaml \
+            --stack-name cakeshop-saas \
+            --parameter-overrides \
+              KeyName=${{ secrets.AWS_KEY_PAIR_NAME }} \
+              DBHost=${{ secrets.AWS_RDS_ENDPOINT }} \
+              DBName=cakeshop \
+              DBUser=${{ secrets.AWS_RDS_USERNAME }} \
+              DBPassword=${{ secrets.AWS_RDS_PASSWORD }} \
+              RedisHost="none" \
+              S3Bucket="cakeshop-media-$(date +%s)" \
+            --capabilities CAPABILITY_IAM \
+            --no-fail-on-empty-changeset
 
-    - name: Get EC2 instance public IP
-      id: get-ip
-      run: |
-        echo "Getting EC2 instance public IP..."
-        # Wait for instances to be fully created and initialized
-        sleep 30
+      - name: Retrieve EC2 instance public IP
+        id: get_ip
+        run: |
+          echo "Waiting for EC2 instance to initialize..."
+          sleep 30
 
-        # Get instance ID
-        INSTANCE_ID=$(aws ec2 describe-instances --filters "Name=tag:aws:cloudformation:stack-name,Values=cakeshop-saas" --query "Reservations[0].Instances[0].InstanceId" --output text)
+          INSTANCE_ID=$(aws ec2 describe-instances \
+            --filters "Name=tag:aws:cloudformation:stack-name,Values=cakeshop-saas" \
+            --query "Reservations[].Instances[].InstanceId" \
+            --output text)
 
-        if [[ "$INSTANCE_ID" == "None" || -z "$INSTANCE_ID" ]]; then
-          echo "Warning: Could not find instance ID. Stack may still be creating resources."
-          echo "::set-output name=public_ip::pending"
-          exit 0
-        fi
+          if [[ -z "$INSTANCE_ID" ]]; then
+            echo "Warning: Instance not found yet."
+            echo "public_ip=pending" >> $GITHUB_OUTPUT
+            exit 0
+          fi
 
-        echo "Instance ID: $INSTANCE_ID"
+          echo "Instance ID: $INSTANCE_ID"
 
-        # Get public IP
-        PUBLIC_IP=$(aws ec2 describe-instances --instance-ids $INSTANCE_ID --query "Reservations[0].Instances[0].PublicIpAddress" --output text)
+          PUBLIC_IP=$(aws ec2 describe-instances \
+            --instance-ids "$INSTANCE_ID" \
+            --query "Reservations[].Instances[].PublicIpAddress" \
+            --output text)
 
-        if [[ "$PUBLIC_IP" == "None" || -z "$PUBLIC_IP" ]]; then
-          echo "Warning: Instance does not have a public IP yet. It may still be initializing."
-          echo "::set-output name=public_ip::pending"
-          exit 0
-        fi
+          if [[ -z "$PUBLIC_IP" || "$PUBLIC_IP" == "None" ]]; then
+            echo "Instance is initializing. Public IP not assigned yet."
+            echo "public_ip=pending" >> $GITHUB_OUTPUT
+            exit 0
+          fi
 
-        echo "Public IP: $PUBLIC_IP"
-        echo "::set-output name=public_ip::$PUBLIC_IP"
+          echo "Public IP: $PUBLIC_IP"
+          echo "public_ip=$PUBLIC_IP" >> $GITHUB_OUTPUT
 
-    - name: Output deployment information
-      run: |
-        echo "Cake Shop SaaS deployed successfully!"
-        if [[ "${{ steps.get-ip.outputs.public_ip }}" == "pending" ]]; then
-          echo "The EC2 instance is still initializing. Please check the AWS Console for the public IP address in a few minutes."
-          echo "You can find your instance in the EC2 Dashboard by looking for instances with the tag 'aws:cloudformation:stack-name' = 'cakeshop-saas'."
-        else
-          echo "Access your application at: http://${{ steps.get-ip.outputs.public_ip }}/"
-        fi
+      - name: Output deployment details
+        run: |
+          echo "Cake Shop SaaS deployed successfully!"
+          if [[ "${{ steps.get_ip.outputs.public_ip }}" == "pending" ]]; then
+            echo "⚠️ EC2 instance is still initializing."
+            echo "🔍 Check the AWS EC2 Console using the stack name 'cakeshop-saas'."
+          else
+            echo "🚀 Access your app at: http://${{ steps.get_ip.outputs.public_ip }}/"
+          fi
 
-        echo "\nNote: It may take a few minutes for the instance to fully initialize and for the application to be accessible."
+          echo -e "\n🕐 Note: It might take a few more minutes for the instance to fully initialize."
