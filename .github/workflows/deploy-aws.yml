@@ -60,7 +60,7 @@ jobs:
             DBUser=${{ secrets.AWS_RDS_USERNAME }} \
             DBPassword=${{ secrets.AWS_RDS_PASSWORD }} \
             RedisHost="none" \
-            S3Bucket=cakeshop-media-${{ secrets.AWS_ACCOUNT_ID || '000000000000' }} \
+            S3Bucket="cakeshop-media-$(date +%s)" \
           --capabilities CAPABILITY_IAM \
           --no-fail-on-empty-changeset
 

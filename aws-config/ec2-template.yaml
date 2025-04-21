@@ -56,7 +56,7 @@ Parameters:
   S3Bucket:
     Description: S3 bucket for media storage
     Type: String
-    Default: !Sub "cakeshop-media-${AWS::AccountId}"
+    Default: "cakeshop-media-unique"
 
 Resources:
   WebServerSecurityGroup:
