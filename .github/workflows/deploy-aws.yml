@@ -18,10 +18,17 @@ jobs:
       with:
         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: us-east-1
+        aws-region: ${{ secrets.AWS_REGION || 'us-east-1' }}
+        
+    - name: Verify AWS credentials
+      run: |
+        echo "Verifying AWS credentials..."
+        aws sts get-caller-identity
+        echo "AWS credentials verified successfully!"
         
     - name: Deploy CloudFormation stack
       run: |
+        echo "Deploying CloudFormation stack..."
         aws cloudformation deploy \
           --template-file aws-config/ec2-template.yaml \
           --stack-name cakeshop-saas \
@@ -31,13 +38,19 @@ jobs:
             DBName=cakeshop \
             DBUser=${{ secrets.AWS_RDS_USERNAME }} \
             DBPassword=${{ secrets.AWS_RDS_PASSWORD }} \
+            RedisHost="none" \
             S3Bucket=cakeshop-media
           
     - name: Get EC2 instance public IP
       id: get-ip
       run: |
+        echo "Getting EC2 instance public IP..."
         INSTANCE_ID=$(aws ec2 describe-instances --filters "Name=tag:aws:cloudformation:stack-name,Values=cakeshop-saas" --query "Reservations[0].Instances[0].InstanceId" --output text)
+        echo "Instance ID: $INSTANCE_ID"
+        
         PUBLIC_IP=$(aws ec2 describe-instances --instance-ids $INSTANCE_ID --query "Reservations[0].Instances[0].PublicIpAddress" --output text)
+        echo "Public IP: $PUBLIC_IP"
+        
         echo "::set-output name=public_ip::$PUBLIC_IP"
         
     - name: Output deployment information
