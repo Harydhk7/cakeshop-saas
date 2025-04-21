@@ -1,0 +1,58 @@
+name: Create New Cake Shop Tenant
+
+on:
+  workflow_dispatch:
+    inputs:
+      tenant_name:
+        description: 'Tenant name (e.g., Sweet Delights Bakery)'
+        required: true
+      tenant_domain:
+        description: 'Tenant domain (e.g., sweetdelights.cakeshopsaas.com)'
+        required: true
+      tenant_email:
+        description: 'Tenant admin email'
+        required: true
+
+jobs:
+  create-tenant:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+      
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-east-1
+        
+    - name: Get EC2 instance public IP
+      id: get-ip
+      run: |
+        INSTANCE_ID=$(aws ec2 describe-instances --filters "Name=tag:aws:cloudformation:stack-name,Values=cakeshop-saas" --query "Reservations[0].Instances[0].InstanceId" --output text)
+        PUBLIC_IP=$(aws ec2 describe-instances --instance-ids $INSTANCE_ID --query "Reservations[0].Instances[0].PublicIpAddress" --output text)
+        echo "::set-output name=public_ip::$PUBLIC_IP"
+        
+    - name: Create tenant directory in S3
+      run: |
+        aws s3api put-object --bucket cakeshop-media --key ${{ github.event.inputs.tenant_name }}/ --content-type application/x-directory
+        
+    - name: Create tenant in PrestaShop
+      run: |
+        # SSH into the EC2 instance and run the tenant creation script
+        ssh -o StrictHostKeyChecking=no -i ${{ secrets.SSH_PRIVATE_KEY }} ec2-user@${{ steps.get-ip.outputs.public_ip }} << 'EOF'
+          cd /var/www/html
+          php bin/console prestashop:tenant:create \
+            --name="${{ github.event.inputs.tenant_name }}" \
+            --domain="${{ github.event.inputs.tenant_domain }}" \
+            --email="${{ github.event.inputs.tenant_email }}"
+        EOF
+        
+    - name: Output tenant information
+      run: |
+        echo "New cake shop tenant created successfully!"
+        echo "Tenant Name: ${{ github.event.inputs.tenant_name }}"
+        echo "Tenant Domain: ${{ github.event.inputs.tenant_domain }}"
+        echo "Admin URL: http://${{ github.event.inputs.tenant_domain }}/admin123"

@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cake Dream - PrestaShop Theme Preview</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Playfair+Display:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="assets/css/cake-shop.css">
+    <style>
+        /* Additional styles for preview only */
+        .preview-header {
+            background-color: #F8BBD0;
+            padding: 20px;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .preview-header h1 {
+            color: #795548;
+            font-family: 'Playfair Display', serif;
+        }
+        .preview-section {
+            margin-bottom: 50px;
+            padding: 20px;
+            border-radius: 10px;
+            background-color: #FFF;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        .preview-section h2 {
+            color: #795548;
+            font-family: 'Playfair Display', serif;
+            margin-bottom: 20px;
+            position: relative;
+        }
+        .preview-section h2:after {
+            content: "";
+            display: block;
+            width: 80px;
+            height: 3px;
+            background-color: #F8BBD0;
+            margin-top: 10px;
+        }
+        .color-swatch {
+            height: 100px;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #FFF;
+            font-weight: bold;
+        }
+        .product-card {
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .product-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15);
+        }
+        .product-card img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+        }
+        .product-card .card-body {
+            padding: 15px;
+        }
+        .product-card .card-title {
+            font-family: 'Playfair Display', serif;
+            color: #795548;
+        }
+        .product-card .price {
+            color: #795548;
+            font-weight: 600;
+            font-size: 1.2rem;
+        }
+        .product-card .btn {
+            background-color: #795548;
+            color: #FFF;
+            border-radius: 25px;
+            padding: 8px 15px;
+            font-weight: 600;
+            transition: background-color 0.3s ease;
+        }
+        .product-card .btn:hover {
+            background-color: #5D4037;
+        }
+    </style>
+</head>
+<body>
+    <div class="preview-header">
+        <h1>Cake Dream - PrestaShop Theme</h1>
+        <p>A delicious theme for cake shops and bakeries</p>
+    </div>
+
+    <div class="container">
+        <div class="preview-section">
+            <h2>Color Palette</h2>
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="color-swatch" style="background-color: #F8BBD0; color: #795548;">
+                        Primary Color<br>#F8BBD0
+                    </div>
+                    <p class="text-center">Soft Pink</p>
+                </div>
+                <div class="col-md-3">
+                    <div class="color-swatch" style="background-color: #FFF8E1; color: #795548;">
+                        Secondary Color<br>#FFF8E1
+                    </div>
+                    <p class="text-center">Cream</p>
+                </div>
+                <div class="col-md-3">
+                    <div class="color-swatch" style="background-color: #795548; color: #FFF;">
+                        Accent Color<br>#795548
+                    </div>
+                    <p class="text-center">Chocolate Brown</p>
+                </div>
+                <div class="col-md-3">
+                    <div class="color-swatch" style="background-color: #4A4A4A; color: #FFF;">
+                        Text Color<br>#4A4A4A
+                    </div>
+                    <p class="text-center">Dark Gray</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="preview-section">
+            <h2>Typography</h2>
+            <div class="row">
+                <div class="col-md-6">
+                    <h3 style="font-family: 'Playfair Display', serif;">Headings: Playfair Display</h3>
+                    <p style="font-family: 'Playfair Display', serif; font-size: 1.5rem;">The quick brown fox jumps over the lazy dog.</p>
+                    <p style="font-family: 'Playfair Display', serif; font-size: 1.2rem;">ABCDEFGHIJKLMNOPQRSTUVWXYZ<br>abcdefghijklmnopqrstuvwxyz<br>1234567890</p>
+                </div>
+                <div class="col-md-6">
+                    <h3 style="font-family: 'Montserrat', sans-serif;">Body: Montserrat</h3>
+                    <p style="font-family: 'Montserrat', sans-serif; font-size: 1rem;">The quick brown fox jumps over the lazy dog.</p>
+                    <p style="font-family: 'Montserrat', sans-serif; font-size: 1rem;">ABCDEFGHIJKLMNOPQRSTUVWXYZ<br>abcdefghijklmnopqrstuvwxyz<br>1234567890</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="preview-section">
+            <h2>Buttons</h2>
+            <div class="row">
+                <div class="col-md-3">
+                    <button class="btn btn-primary mb-3 d-block">Primary Button</button>
+                    <button class="btn btn-primary mb-3 d-block" disabled>Primary Disabled</button>
+                </div>
+                <div class="col-md-3">
+                    <button class="btn btn-secondary mb-3 d-block">Secondary Button</button>
+                    <button class="btn btn-secondary mb-3 d-block" disabled>Secondary Disabled</button>
+                </div>
+                <div class="col-md-3">
+                    <button class="btn btn-outline-primary mb-3 d-block">Outline Primary</button>
+                    <button class="btn btn-outline-primary mb-3 d-block" disabled>Outline Disabled</button>
+                </div>
+                <div class="col-md-3">
+                    <button class="btn btn-link mb-3 d-block">Link Button</button>
+                    <button class="btn btn-link mb-3 d-block" disabled>Link Disabled</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="preview-section">
+            <h2>Product Cards</h2>
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="product-card">
+                        <img src="https://via.placeholder.com/300x200/F8BBD0/795548?text=Chocolate+Cake" alt="Chocolate Cake">
+                        <div class="card-body">
+                            <h5 class="card-title">Chocolate Fudge Cake</h5>
+                            <p class="price">$35.99</p>
+                            <button class="btn">Add to Cart</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="product-card">
+                        <img src="https://via.placeholder.com/300x200/FFF8E1/795548?text=Vanilla+Cake" alt="Vanilla Cake">
+                        <div class="card-body">
+                            <h5 class="card-title">Vanilla Buttercream Cake</h5>
+                            <p class="price">$32.99</p>
+                            <button class="btn">Add to Cart</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="product-card">
+                        <img src="https://via.placeholder.com/300x200/FFCDD2/795548?text=Red+Velvet" alt="Red Velvet Cake">
+                        <div class="card-body">
+                            <h5 class="card-title">Red Velvet Cake</h5>
+                            <p class="price">$38.99</p>
+                            <button class="btn">Add to Cart</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="product-card">
+                        <img src="https://via.placeholder.com/300x200/E1F5FE/795548?text=Rainbow+Cake" alt="Rainbow Cake">
+                        <div class="card-body">
+                            <h5 class="card-title">Rainbow Layer Cake</h5>
+                            <p class="price">$42.99</p>
+                            <button class="btn">Add to Cart</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="preview-section">
+            <h2>Banner Example</h2>
+            <div class="cake-banner">
+                <h3>Delicious Custom Cakes</h3>
+                <p>Order a custom cake for your special occasion. We create beautiful and delicious cakes for birthdays, weddings, and celebrations.</p>
+                <button class="btn">Order Now</button>
+            </div>
+        </div>
+    </div>
+
+    <footer class="footer-container">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-3">
+                    <h3>Shop</h3>
+                    <ul class="list-unstyled">
+                        <li><a href="#">Birthday Cakes</a></li>
+                        <li><a href="#">Wedding Cakes</a></li>
+                        <li><a href="#">Cupcakes</a></li>
+                        <li><a href="#">Pastries</a></li>
+                    </ul>
+                </div>
+                <div class="col-md-3">
+                    <h3>Information</h3>
+                    <ul class="list-unstyled">
+                        <li><a href="#">About Us</a></li>
+                        <li><a href="#">Delivery Information</a></li>
+                        <li><a href="#">Privacy Policy</a></li>
+                        <li><a href="#">Terms & Conditions</a></li>
+                    </ul>
+                </div>
+                <div class="col-md-3">
+                    <h3>Account</h3>
+                    <ul class="list-unstyled">
+                        <li><a href="#">My Account</a></li>
+                        <li><a href="#">Order History</a></li>
+                        <li><a href="#">Wish List</a></li>
+                        <li><a href="#">Newsletter</a></li>
+                    </ul>
+                </div>
+                <div class="col-md-3">
+                    <h3>Contact Us</h3>
+                    <div class="block-contact">
+                        <p><i class="material-icons">location_on</i> 123 Cake Street, Bakery Town</p>
+                        <p><i class="material-icons">phone</i> (123) 456-7890</p>
+                        <p><i class="material-icons">email</i> info@cakeshop.com</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </footer>
+    <div class="copyright-footer">
+        <div class="container">
+            <p>© 2023 Cake Dream Theme. All Rights Reserved.</p>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script src="assets/js/cake-shop.js"></script>
+</body>
+</html>

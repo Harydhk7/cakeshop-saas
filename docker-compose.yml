@@ -3,25 +3,25 @@ version: '3'
 services:
   mysql:
     image: mysql:5.7
-    container_name: prestashop-mysql
+    container_name: cakeshop-mysql
     environment:
-      MYSQL_ROOT_PASSWORD: prestashop
-      MYSQL_DATABASE: prestashop
-      MYSQL_USER: prestashop
-      MYSQL_PASSWORD: prestashop
+      MYSQL_ROOT_PASSWORD: cakeshop
+      MYSQL_DATABASE: cakeshop
+      MYSQL_USER: cakeshop
+      MYSQL_PASSWORD: cakeshop
     volumes:
       - mysql_data:/var/lib/mysql
     networks:
-      - prestashop_network
+      - cakeshop_network
 
   prestashop:
     image: prestashop/prestashop:8.1
-    container_name: prestashop-web
+    container_name: cakeshop-web
     environment:
       DB_SERVER: mysql
-      DB_NAME: prestashop
-      DB_USER: prestashop
-      DB_PASSWD: prestashop
+      DB_NAME: cakeshop
+      DB_USER: cakeshop
+      DB_PASSWD: cakeshop
       PS_INSTALL_AUTO: 1
       PS_DOMAIN: localhost:8080
       PS_FOLDER_ADMIN: admin123
@@ -29,8 +29,10 @@ services:
       PS_COUNTRY: US
       PS_LANGUAGE: en
       PS_DEV_MODE: 1
-      ADMIN_MAIL: admin@example.com
-      ADMIN_PASSWD: prestashop
+      PS_SHOP_NAME: "Sweet Delights Cake Shop"
+      PS_SHOP_ACTIVITY: 4 # Food
+      ADMIN_MAIL: admin@cakeshop.com
+      ADMIN_PASSWD: cakeshop
     ports:
       - "8080:80"
     volumes:
@@ -38,32 +40,32 @@ services:
     depends_on:
       - mysql
     networks:
-      - prestashop_network
+      - cakeshop_network
 
   phpmyadmin:
     image: phpmyadmin/phpmyadmin
-    container_name: prestashop-phpmyadmin
+    container_name: cakeshop-phpmyadmin
     environment:
       PMA_HOST: mysql
-      PMA_USER: prestashop
-      PMA_PASSWORD: prestashop
+      PMA_USER: cakeshop
+      PMA_PASSWORD: cakeshop
     ports:
       - "8081:80"
     depends_on:
       - mysql
     networks:
-      - prestashop_network
+      - cakeshop_network
 
   redis:
     image: redis:6
-    container_name: prestashop-redis
+    container_name: cakeshop-redis
     ports:
       - "6379:6379"
     networks:
-      - prestashop_network
+      - cakeshop_network
 
 networks:
-  prestashop_network:
+  cakeshop_network:
 
 volumes:
   mysql_data:

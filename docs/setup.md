@@ -1,6 +1,6 @@
-# PrestaShop SaaS Setup Guide
+# Cake Shop SaaS Setup Guide
 
-This document provides instructions for setting up the PrestaShop SaaS application.
+This document provides instructions for setting up the Cake Shop SaaS application based on PrestaShop.
 
 ## Prerequisites
 
@@ -14,8 +14,8 @@ This document provides instructions for setting up the PrestaShop SaaS applicati
 
 1. Clone the repository:
    ```
-   git clone https://github.com/yourusername/prestashop-saas.git
-   cd prestashop-saas
+   git clone https://github.com/yourusername/cakeshop-saas.git
+   cd cakeshop-saas
    ```
 
 2. Install dependencies:
@@ -37,20 +37,22 @@ This document provides instructions for setting up the PrestaShop SaaS applicati
 
 7. After installation, remove the `install` directory for security
 
-## Multi-tenant Configuration
+## Cake Shop Multi-tenant Configuration
 
-To configure PrestaShop for multi-tenant SaaS operation:
+To configure PrestaShop for a cake shop multi-tenant SaaS operation:
 
-1. Set up a domain routing system that directs different domains to the same PrestaShop installation
+1. Set up a domain routing system that directs different cake shop domains to the same PrestaShop installation
 
-2. Modify the PrestaShop configuration to support multiple shops:
+2. Modify the PrestaShop configuration to support multiple cake shops:
    - Go to Advanced Parameters > Multistore
    - Enable the multistore feature
-   - Create a shop group for each tenant
+   - Create a shop group for each cake shop tenant (e.g., "Sweet Delights Bakery", "Chocolate Haven")
    - Create shops within each shop group
 
-3. Configure separate databases for each tenant (recommended for larger installations)
+3. Configure separate databases for each cake shop tenant (recommended for larger installations)
 
-## AWS Deployment
+4. Install and customize the cake shop theme for each tenant (see [Cake Shop Theme Guide](cake-shop-theme.md))
 
-See the [AWS Deployment Guide](aws-deployment.md) for detailed instructions on deploying to AWS.
+## AWS Free Tier Deployment
+
+See the [AWS Free Tier Deployment Guide](aws-deployment.md) for detailed instructions on deploying to AWS using only free tier eligible resources.

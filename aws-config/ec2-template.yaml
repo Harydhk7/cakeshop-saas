@@ -1,23 +1,20 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: 'PrestaShop SaaS EC2 Instance Template'
+Description: 'Cake Shop SaaS EC2 Instance Template (Free Tier Eligible)'
 
 Parameters:
   KeyName:
     Description: Name of an existing EC2 KeyPair to enable SSH access to the instance
     Type: AWS::EC2::KeyPair::KeyName
     ConstraintDescription: must be the name of an existing EC2 KeyPair.
-  
+
   InstanceType:
     Description: WebServer EC2 instance type
     Type: String
-    Default: t3.medium
+    Default: t2.micro
     AllowedValues:
-      - t3.small
-      - t3.medium
-      - t3.large
-      - m5.large
-    ConstraintDescription: must be a valid EC2 instance type.
-  
+      - t2.micro
+    ConstraintDescription: must be a valid EC2 instance type (t2.micro is free tier eligible).
+
   SSHLocation:
     Description: The IP address range that can be used to SSH to the EC2 instances
     Type: String
@@ -30,30 +27,30 @@ Parameters:
   DBHost:
     Description: RDS endpoint
     Type: String
-  
+
   DBName:
     Description: Database name
     Type: String
-    Default: prestashop
-  
+    Default: cakeshop
+
   DBUser:
     Description: Database user
     Type: String
     Default: admin
-  
+
   DBPassword:
     Description: Database password
     Type: String
     NoEcho: true
-  
+
   RedisHost:
     Description: ElastiCache Redis endpoint
     Type: String
-  
+
   S3Bucket:
     Description: S3 bucket for media storage
     Type: String
-    Default: prestashop-media
+    Default: cakeshop-media
 
 Resources:
   WebServerSecurityGroup:
@@ -88,26 +85,26 @@ Resources:
           yum update -y
           amazon-linux-extras install -y lamp-mariadb10.2-php7.4 php7.4
           yum install -y httpd git
-          
+
           # Install PHP extensions required by PrestaShop
           yum install -y php-gd php-mbstring php-xml php-curl php-zip php-intl php-bcmath php-json php-mysql
-          
+
           # Install Composer
           curl -sS https://getcomposer.org/installer | php
           mv composer.phar /usr/local/bin/composer
-          
+
           # Configure Apache
           systemctl start httpd
           systemctl enable httpd
-          
-          # Clone PrestaShop repository
+
+          # Clone Cake Shop repository
           cd /var/www/html
-          git clone https://github.com/yourusername/prestashop-saas.git .
-          
+          git clone https://github.com/yourusername/cakeshop-saas.git .
+
           # Set permissions
           chown -R apache:apache /var/www/html
           chmod -R 755 /var/www/html
-          
+
           # Configure PrestaShop
           cat > /var/www/html/src/app/config/parameters.php << 'EOF'
           <?php
@@ -133,7 +130,7 @@ Resources:
               ]
           ];
           EOF
-          
+
           # Configure S3 for media storage
           cat > /var/www/html/src/config/defines.inc.php << 'EOF'
           <?php
@@ -142,7 +139,7 @@ Resources:
           define('_PS_MEDIA_SERVER_2_', 'https://${S3Bucket}.s3.amazonaws.com');
           define('_PS_MEDIA_SERVER_3_', 'https://${S3Bucket}.s3.amazonaws.com');
           EOF
-          
+
           # Restart Apache
           systemctl restart httpd
 
@@ -151,20 +148,20 @@ Resources:
     Properties:
       LaunchConfigurationName: !Ref WebServerLaunchConfig
       MinSize: 1
-      MaxSize: 3
-      DesiredCapacity: 2
+      MaxSize: 1
+      DesiredCapacity: 1
       AvailabilityZones:
         Fn::GetAZs: !Ref 'AWS::Region'
       Tags:
         - Key: Name
-          Value: PrestaShop SaaS Web Server
+          Value: Cake Shop SaaS Web Server
           PropagateAtLaunch: true
 
 Outputs:
   WebServerSecurityGroup:
     Description: Security group for web servers
     Value: !Ref WebServerSecurityGroup
-  
+
   AutoScalingGroup:
     Description: Auto Scaling Group containing the web servers
     Value: !Ref WebServerGroup

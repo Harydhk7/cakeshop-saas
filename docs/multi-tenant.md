@@ -1,6 +1,6 @@
-# Multi-Tenant Configuration for PrestaShop SaaS
+# Multi-Tenant Configuration for Cake Shop SaaS
 
-This guide explains how to configure PrestaShop for multi-tenant operation in a SaaS environment.
+This guide explains how to configure PrestaShop for multi-tenant operation in a cake shop SaaS environment.
 
 ## What is Multi-Tenancy?
 
@@ -28,13 +28,13 @@ Shop groups allow you to share certain characteristics between shops while keepi
 
 1. Go to Advanced Parameters > Multistore
 2. Click "Add new shop group"
-3. Enter a name for the shop group (e.g., "Tenant 1")
+3. Enter a name for the shop group (e.g., "Sweet Delights Bakery")
 4. Configure sharing options:
    - Share customers: No
    - Share available quantities: No
    - Share orders: No
 5. Save the shop group
-6. Repeat for each tenant
+6. Repeat for each cake shop tenant
 
 ### 3. Create Shops Within Groups
 
@@ -53,7 +53,7 @@ Each shop needs its own domain or subdomain:
 1. Go to Advanced Parameters > Multistore
 2. Click on the "Configure" icon for the shop
 3. Add the shop URL:
-   - Domain (e.g., tenant1.yoursaas.com)
+   - Domain (e.g., sweetdelights.cakeshopsaas.com)
    - SSL Domain (if using HTTPS)
    - Physical URI (usually "/")
 4. Save the URL
@@ -74,14 +74,14 @@ Option 2: Table prefix isolation
 
 #### File System Isolation
 
-1. Create separate media directories for each shop
+1. Create separate media directories for each cake shop
 2. Configure PrestaShop to use these directories:
    ```php
    // In config/defines.inc.php
    if (defined('_PS_SHOP_ID_') && _PS_SHOP_ID_ == 1) {
-       define('_PS_IMG_DIR_', _PS_ROOT_DIR_.'/img/tenant1/');
+       define('_PS_IMG_DIR_', _PS_ROOT_DIR_.'/img/sweetdelights/');
    } elseif (defined('_PS_SHOP_ID_') && _PS_SHOP_ID_ == 2) {
-       define('_PS_IMG_DIR_', _PS_ROOT_DIR_.'/img/tenant2/');
+       define('_PS_IMG_DIR_', _PS_ROOT_DIR_.'/img/chocolatehaven/');
    }
    ```
 
