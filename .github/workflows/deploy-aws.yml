@@ -8,18 +8,18 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v2
-      
+
     - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v1
       with:
         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: us-east-1
-        
+
     - name: Deploy CloudFormation stack
       run: |
         aws cloudformation deploy \
@@ -31,15 +31,16 @@ jobs:
             DBName=cakeshop \
             DBUser=${{ secrets.AWS_RDS_USERNAME }} \
             DBPassword=${{ secrets.AWS_RDS_PASSWORD }} \
+            RedisHost="none" \
             S3Bucket=cakeshop-media
-          
+
     - name: Get EC2 instance public IP
       id: get-ip
       run: |
         INSTANCE_ID=$(aws ec2 describe-instances --filters "Name=tag:aws:cloudformation:stack-name,Values=cakeshop-saas" --query "Reservations[0].Instances[0].InstanceId" --output text)
         PUBLIC_IP=$(aws ec2 describe-instances --instance-ids $INSTANCE_ID --query "Reservations[0].Instances[0].PublicIpAddress" --output text)
         echo "::set-output name=public_ip::$PUBLIC_IP"
-        
+
     - name: Output deployment information
       run: |
         echo "Cake Shop SaaS deployed successfully!"

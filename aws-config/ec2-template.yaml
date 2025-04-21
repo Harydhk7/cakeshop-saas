@@ -46,6 +46,7 @@ Parameters:
   RedisHost:
     Description: ElastiCache Redis endpoint
     Type: String
+    Default: none
 
   S3Bucket:
     Description: S3 bucket for media storage
@@ -74,7 +75,7 @@ Resources:
   WebServerLaunchConfig:
     Type: AWS::AutoScaling::LaunchConfiguration
     Properties:
-      ImageId: ami-0c55b159cbfafe1f0  # Amazon Linux 2 AMI (adjust for your region)
+      ImageId: ami-0f34c5ae932e6f0e4  # Amazon Linux 2 AMI for us-east-1
       InstanceType: !Ref InstanceType
       SecurityGroups:
         - !Ref WebServerSecurityGroup
@@ -99,7 +100,7 @@ Resources:
 
           # Clone Cake Shop repository
           cd /var/www/html
-          git clone https://github.com/yourusername/cakeshop-saas.git .
+          git clone https://github.com/Harydhk7/cakeshop-saas.git .
 
           # Set permissions
           chown -R apache:apache /var/www/html
