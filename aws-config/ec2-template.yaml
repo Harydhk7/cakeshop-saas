@@ -7,6 +7,11 @@ Parameters:
     Type: AWS::EC2::KeyPair::KeyName
     ConstraintDescription: must be the name of an existing EC2 KeyPair.
 
+  LatestAmiId:
+    Type: 'AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>'
+    Default: '/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2'
+    Description: The latest Amazon Linux 2 AMI from the Parameter Store
+
   InstanceType:
     Description: WebServer EC2 instance type
     Type: String
@@ -51,7 +56,7 @@ Parameters:
   S3Bucket:
     Description: S3 bucket for media storage
     Type: String
-    Default: cakeshop-media
+    Default: !Sub "cakeshop-media-${AWS::AccountId}"
 
 Resources:
   WebServerSecurityGroup:
@@ -75,7 +80,7 @@ Resources:
   WebServerLaunchConfig:
     Type: AWS::AutoScaling::LaunchConfiguration
     Properties:
-      ImageId: ami-0f34c5ae932e6f0e4  # Amazon Linux 2 AMI for us-east-1
+      ImageId: !Ref LatestAmiId  # Latest Amazon Linux 2 AMI from Parameter Store
       InstanceType: !Ref InstanceType
       SecurityGroups:
         - !Ref WebServerSecurityGroup
