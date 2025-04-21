@@ -1,0 +1,170 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'PrestaShop SaaS EC2 Instance Template'
+
+Parameters:
+  KeyName:
+    Description: Name of an existing EC2 KeyPair to enable SSH access to the instance
+    Type: AWS::EC2::KeyPair::KeyName
+    ConstraintDescription: must be the name of an existing EC2 KeyPair.
+  
+  InstanceType:
+    Description: WebServer EC2 instance type
+    Type: String
+    Default: t3.medium
+    AllowedValues:
+      - t3.small
+      - t3.medium
+      - t3.large
+      - m5.large
+    ConstraintDescription: must be a valid EC2 instance type.
+  
+  SSHLocation:
+    Description: The IP address range that can be used to SSH to the EC2 instances
+    Type: String
+    MinLength: 9
+    MaxLength: 18
+    Default: 0.0.0.0/0
+    AllowedPattern: (\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})/(\d{1,2})
+    ConstraintDescription: must be a valid IP CIDR range of the form x.x.x.x/x.
+
+  DBHost:
+    Description: RDS endpoint
+    Type: String
+  
+  DBName:
+    Description: Database name
+    Type: String
+    Default: prestashop
+  
+  DBUser:
+    Description: Database user
+    Type: String
+    Default: admin
+  
+  DBPassword:
+    Description: Database password
+    Type: String
+    NoEcho: true
+  
+  RedisHost:
+    Description: ElastiCache Redis endpoint
+    Type: String
+  
+  S3Bucket:
+    Description: S3 bucket for media storage
+    Type: String
+    Default: prestashop-media
+
+Resources:
+  WebServerSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enable HTTP and SSH access
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: !Ref SSHLocation
+
+  WebServerLaunchConfig:
+    Type: AWS::AutoScaling::LaunchConfiguration
+    Properties:
+      ImageId: ami-0c55b159cbfafe1f0  # Amazon Linux 2 AMI (adjust for your region)
+      InstanceType: !Ref InstanceType
+      SecurityGroups:
+        - !Ref WebServerSecurityGroup
+      KeyName: !Ref KeyName
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash -xe
+          yum update -y
+          amazon-linux-extras install -y lamp-mariadb10.2-php7.4 php7.4
+          yum install -y httpd git
+          
+          # Install PHP extensions required by PrestaShop
+          yum install -y php-gd php-mbstring php-xml php-curl php-zip php-intl php-bcmath php-json php-mysql
+          
+          # Install Composer
+          curl -sS https://getcomposer.org/installer | php
+          mv composer.phar /usr/local/bin/composer
+          
+          # Configure Apache
+          systemctl start httpd
+          systemctl enable httpd
+          
+          # Clone PrestaShop repository
+          cd /var/www/html
+          git clone https://github.com/yourusername/prestashop-saas.git .
+          
+          # Set permissions
+          chown -R apache:apache /var/www/html
+          chmod -R 755 /var/www/html
+          
+          # Configure PrestaShop
+          cat > /var/www/html/src/app/config/parameters.php << 'EOF'
+          <?php
+          return [
+              'parameters' => [
+                  'database_host' => '${DBHost}',
+                  'database_port' => '',
+                  'database_name' => '${DBName}',
+                  'database_user' => '${DBUser}',
+                  'database_password' => '${DBPassword}',
+                  'database_prefix' => 'ps_',
+                  'database_engine' => 'InnoDB',
+                  'mailer_transport' => 'smtp',
+                  'mailer_host' => '127.0.0.1',
+                  'mailer_user' => null,
+                  'mailer_password' => null,
+                  'secret' => '$(openssl rand -base64 32)',
+                  'ps_caching' => 'CacheMemcache',
+                  'ps_cache_enable' => true,
+                  'ps_creation_date' => '$(date +%Y-%m-%d)',
+                  'redis_host' => '${RedisHost}',
+                  'redis_port' => '6379',
+              ]
+          ];
+          EOF
+          
+          # Configure S3 for media storage
+          cat > /var/www/html/src/config/defines.inc.php << 'EOF'
+          <?php
+          /* Custom S3 configuration */
+          define('_PS_MEDIA_SERVER_1_', 'https://${S3Bucket}.s3.amazonaws.com');
+          define('_PS_MEDIA_SERVER_2_', 'https://${S3Bucket}.s3.amazonaws.com');
+          define('_PS_MEDIA_SERVER_3_', 'https://${S3Bucket}.s3.amazonaws.com');
+          EOF
+          
+          # Restart Apache
+          systemctl restart httpd
+
+  WebServerGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      LaunchConfigurationName: !Ref WebServerLaunchConfig
+      MinSize: 1
+      MaxSize: 3
+      DesiredCapacity: 2
+      AvailabilityZones:
+        Fn::GetAZs: !Ref 'AWS::Region'
+      Tags:
+        - Key: Name
+          Value: PrestaShop SaaS Web Server
+          PropagateAtLaunch: true
+
+Outputs:
+  WebServerSecurityGroup:
+    Description: Security group for web servers
+    Value: !Ref WebServerSecurityGroup
+  
+  AutoScalingGroup:
+    Description: Auto Scaling Group containing the web servers
+    Value: !Ref WebServerGroup
