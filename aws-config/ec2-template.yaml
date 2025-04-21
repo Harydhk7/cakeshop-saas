@@ -43,9 +43,10 @@ Parameters:
     Type: String
     NoEcho: true
 
-  RedisHost:
-    Description: ElastiCache Redis endpoint
+   RedisHost:
+    Description: Redis host for caching (optional)
     Type: String
+    Default: "none"
 
   S3Bucket:
     Description: S3 bucket for media storage
