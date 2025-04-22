@@ -83,7 +83,7 @@ Resources:
       ImageId: !Ref LatestAmiId
       InstanceType: !Ref InstanceType
       SecurityGroupIds:
-        - sg-07b438a9ad9d4469b  # Correct security group ID
+        - sg-0f34646da29709a1b  # Correct security group ID
       KeyName: !Ref KeyName
       UserData:
         Fn::Base64: !Sub |
