@@ -39,7 +39,6 @@ jobs:
             echo "Stack does not exist. Ready to create a new one."
           else
             echo "Stack exists and is in a valid state."
-          fi
 
       - name: Validate CloudFormation template
         run: |
