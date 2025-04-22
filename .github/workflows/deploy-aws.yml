@@ -69,13 +69,14 @@ jobs:
           echo "Waiting for EC2 instance to initialize..."
           sleep 30
 
+          # Get the most recent instance ID (in case there are multiple)
           INSTANCE_ID=$(aws ec2 describe-instances \
             --filters "Name=tag:aws:cloudformation:stack-name,Values=cakeshop-saas" \
-            --query "Reservations[].Instances[].InstanceId" \
+            --query "Reservations[].Instances[?State.Name=='running'].InstanceId | [0]" \
             --output text)
 
-          if [[ -z "$INSTANCE_ID" ]]; then
-            echo "Warning: Instance not found yet."
+          if [[ -z "$INSTANCE_ID" || "$INSTANCE_ID" == "None" ]]; then
+            echo "Warning: No running instance found yet."
             echo "public_ip=pending" >> $GITHUB_OUTPUT
             exit 0
           fi
@@ -84,7 +85,7 @@ jobs:
 
           PUBLIC_IP=$(aws ec2 describe-instances \
             --instance-ids "$INSTANCE_ID" \
-            --query "Reservations[].Instances[].PublicIpAddress" \
+            --query "Reservations[].Instances[].PublicIpAddress | [0]" \
             --output text)
 
           if [[ -z "$PUBLIC_IP" || "$PUBLIC_IP" == "None" ]]; then
