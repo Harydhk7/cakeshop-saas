@@ -50,7 +50,6 @@ jobs:
       - name: Deploy CloudFormation stack
         run: |
           echo "Deploying CloudFormation stack..."
-          echo "Command: aws cloudformation deploy --template-file aws-config/ec2-template.yaml --stack-name cakeshop-saas --parameter-overrides KeyName=${{ secrets.AWS_KEY_PAIR_NAME }} DBHost=${{ secrets.AWS_RDS_ENDPOINT }} DBName=cakeshop DBUser=${{ secrets.AWS_RDS_USERNAME }} DBPassword=${{ secrets.AWS_RDS_PASSWORD }} RedisHost='none' S3Bucket='cakeshop-media-$(date +%s)' --capabilities CAPABILITY_IAM --no-fail-on-empty-changeset"
           aws cloudformation deploy \
             --template-file aws-config/ec2-template.yaml \
             --stack-name cakeshop-saas \
