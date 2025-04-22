@@ -77,84 +77,88 @@ Resources:
           ToPort: 22
           CidrIp: !Ref SSHLocation
 
-  WebServerLaunchConfig:
-    Type: AWS::AutoScaling::LaunchConfiguration
+  WebServerLaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
     Properties:
-      ImageId: !Ref LatestAmiId
-      InstanceType: !Ref InstanceType
-      SecurityGroups:
-        - !Ref WebServerSecurityGroup
-      KeyName: !Ref KeyName
-      UserData:
-        Fn::Base64: !Sub |
-          #!/bin/bash -xe
-          yum update -y
-          amazon-linux-extras install -y lamp-mariadb10.2-php7.4 php7.4
-          yum install -y httpd git
+      LaunchTemplateName: WebServerLaunchTemplate
+      LaunchTemplateData:
+        ImageId: !Ref LatestAmiId
+        InstanceType: !Ref InstanceType
+        SecurityGroupIds:
+          - !Ref WebServerSecurityGroup
+        KeyName: !Ref KeyName
+        UserData:
+          Fn::Base64: !Sub |
+            #!/bin/bash -xe
+            yum update -y
+            amazon-linux-extras install -y lamp-mariadb10.2-php7.4 php7.4
+            yum install -y httpd git
 
-          # Install PHP extensions
-          yum install -y php-gd php-mbstring php-xml php-curl php-zip php-intl php-bcmath php-json php-mysql
+            # Install PHP extensions
+            yum install -y php-gd php-mbstring php-xml php-curl php-zip php-intl php-bcmath php-json php-mysql
 
-          # Install Composer
-          curl -sS https://getcomposer.org/installer | php
-          mv composer.phar /usr/local/bin/composer
+            # Install Composer
+            curl -sS https://getcomposer.org/installer | php
+            mv composer.phar /usr/local/bin/composer
 
-          # Apache Setup
-          systemctl start httpd
-          systemctl enable httpd
+            # Apache Setup
+            systemctl start httpd
+            systemctl enable httpd
 
-          cd /var/www/html
-          git clone https://github.com/Harydhk7/cakeshop-saas.git .
-          chown -R apache:apache /var/www/html
-          chmod -R 755 /var/www/html
+            cd /var/www/html
+            git clone https://github.com/Harydhk7/cakeshop-saas.git .
+            chown -R apache:apache /var/www/html
+            chmod -R 755 /var/www/html
 
-          # Generate a secret and creation date
-          SECRET=$(openssl rand -base64 32)
-          CREATION_DATE=$(date +%Y-%m-%d)
+            # Generate a secret and creation date
+            SECRET=$(openssl rand -base64 32)
+            CREATION_DATE=$(date +%Y-%m-%d)
 
-          # Create parameters.php with environment substitutions
-          cat > /var/www/html/src/app/config/parameters.php <<EOF
-          <?php
-          return [
-              'parameters' => [
-                  'database_host' => "${DBHost}",
-                  'database_port' => '',
-                  'database_name' => "${DBName}",
-                  'database_user' => "${DBUser}",
-                  'database_password' => "${DBPassword}",
-                  'database_prefix' => 'ps_',
-                  'database_engine' => 'InnoDB',
-                  'mailer_transport' => 'smtp',
-                  'mailer_host' => '127.0.0.1',
-                  'mailer_user' => null,
-                  'mailer_password' => null,
-                  'secret' => "$SECRET",
-                  'ps_caching' => 'CacheMemcache',
-                  'ps_cache_enable' => true,
-                  'ps_creation_date' => "$CREATION_DATE",
-                  'redis_host' => "${RedisHost}",
-                  'redis_port' => '6379',
-              ]
-          ];
-          EOF
+            # Create parameters.php with environment substitutions
+            cat > /var/www/html/src/app/config/parameters.php <<EOF
+            <?php
+            return [
+                'parameters' => [
+                    'database_host' => "${DBHost}",
+                    'database_port' => '',
+                    'database_name' => "${DBName}",
+                    'database_user' => "${DBUser}",
+                    'database_password' => "${DBPassword}",
+                    'database_prefix' => 'ps_',
+                    'database_engine' => 'InnoDB',
+                    'mailer_transport' => 'smtp',
+                    'mailer_host' => '127.0.0.1',
+                    'mailer_user' => null,
+                    'mailer_password' => null,
+                    'secret' => "$SECRET",
+                    'ps_caching' => 'CacheMemcache',
+                    'ps_cache_enable' => true,
+                    'ps_creation_date' => "$CREATION_DATE",
+                    'redis_host' => "${RedisHost}",
+                    'redis_port' => '6379',
+                ]
+            ];
+            EOF
 
-          # Create defines.inc.php for S3
-          cat > /var/www/html/src/config/defines.inc.php <<EOF
-          <?php
-          define('_PS_MEDIA_SERVER_1_', 'https://${S3Bucket}.s3.amazonaws.com');
-          define('_PS_MEDIA_SERVER_2_', 'https://${S3Bucket}.s3.amazonaws.com');
-          define('_PS_MEDIA_SERVER_3_', 'https://${S3Bucket}.s3.amazonaws.com');
-          EOF
+            # Create defines.inc.php for S3
+            cat > /var/www/html/src/config/defines.inc.php <<EOF
+            <?php
+            define('_PS_MEDIA_SERVER_1_', 'https://${S3Bucket}.s3.amazonaws.com');
+            define('_PS_MEDIA_SERVER_2_', 'https://${S3Bucket}.s3.amazonaws.com');
+            define('_PS_MEDIA_SERVER_3_', 'https://${S3Bucket}.s3.amazonaws.com');
+            EOF
 
-          systemctl restart httpd
+            systemctl restart httpd
 
-  WebServerGroup:
+  WebServerAutoScalingGroup:
     Type: AWS::AutoScaling::AutoScalingGroup
     Properties:
-      LaunchConfigurationName: !Ref WebServerLaunchConfig
       MinSize: 1
       MaxSize: 1
       DesiredCapacity: 1
+      LaunchTemplate:
+        LaunchTemplateName: !Ref WebServerLaunchTemplate
+        Version: 1
       AvailabilityZones:
         Fn::GetAZs: !Ref 'AWS::Region'
       Tags:
@@ -169,4 +173,4 @@ Outputs:
 
   AutoScalingGroup:
     Description: Auto Scaling Group containing the web servers
-    Value: !Ref WebServerGroup
+    Value: !Ref WebServerAutoScalingGroup
