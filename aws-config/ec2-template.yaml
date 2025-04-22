@@ -1,63 +1,3 @@
-AWSTemplateFormatVersion: '2010-09-09'
-Description: 'Cake Shop SaaS EC2 Instance Template (Free Tier Eligible)'
-
-Parameters:
-  KeyName:
-    Description: Name of an existing EC2 KeyPair to enable SSH access to the instance
-    Type: AWS::EC2::KeyPair::KeyName
-    ConstraintDescription: must be the name of an existing EC2 KeyPair.
-
-  LatestAmiId:
-    Type: 'AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>'
-    Default: '/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2'
-    Description: The latest Amazon Linux 2 AMI from the Parameter Store
-
-  InstanceType:
-    Description: WebServer EC2 instance type
-    Type: String
-    Default: t2.micro
-    AllowedValues:
-      - t2.micro
-    ConstraintDescription: must be a valid EC2 instance type (t2.micro is free tier eligible).
-
-  SSHLocation:
-    Description: The IP address range that can be used to SSH to the EC2 instances
-    Type: String
-    MinLength: 9
-    MaxLength: 18
-    Default: 0.0.0.0/0
-    AllowedPattern: (\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})/(\d{1,2})
-    ConstraintDescription: must be a valid IP CIDR range of the form x.x.x.x/x.
-
-  DBHost:
-    Description: RDS endpoint
-    Type: String
-
-  DBName:
-    Description: Database name
-    Type: String
-    Default: cakeshop
-
-  DBUser:
-    Description: Database user
-    Type: String
-    Default: admin
-
-  DBPassword:
-    Description: Database password
-    Type: String
-    NoEcho: true
-
-  RedisHost:
-    Description: Redis host for caching (optional)
-    Type: String
-    Default: "none"
-
-  S3Bucket:
-    Description: S3 bucket for media storage
-    Type: String
-    Default: "cakeshop-media-unique"
-
 Resources:
   WebServerSecurityGroup:
     Type: AWS::EC2::SecurityGroup
@@ -77,100 +17,87 @@ Resources:
           ToPort: 22
           CidrIp: !Ref SSHLocation
 
-  WebServerLaunchTemplate:
-    Type: AWS::EC2::LaunchTemplate
+  WebServerLaunchConfig:
+    Type: AWS::AutoScaling::LaunchConfiguration
     Properties:
-      LaunchTemplateName: WebServerLaunchTemplate
-      LaunchTemplateData:
-        ImageId: !Ref LatestAmiId
-        InstanceType: !Ref InstanceType
-        SecurityGroupIds:
-          - !Ref WebServerSecurityGroup
-        KeyName: !Ref KeyName
-        UserData:
-          Fn::Base64: !Sub |
-            #!/bin/bash -xe
-            yum update -y
-            amazon-linux-extras install -y lamp-mariadb10.2-php7.4 php7.4
-            yum install -y httpd git
+      ImageId: !Ref LatestAmiId
+      InstanceType: !Ref InstanceType
+      SecurityGroups:
+        - sg-07b438a9ad9d4469b  # Replace with the correct security group ID
+      KeyName: !Ref KeyName
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash -xe
+          yum update -y
+          amazon-linux-extras install -y lamp-mariadb10.2-php7.4 php7.4
+          yum install -y httpd git
 
-            # Install PHP extensions
-            yum install -y php-gd php-mbstring php-xml php-curl php-zip php-intl php-bcmath php-json php-mysql
+          # Install PHP extensions
+          yum install -y php-gd php-mbstring php-xml php-curl php-zip php-intl php-bcmath php-json php-mysql
 
-            # Install Composer
-            curl -sS https://getcomposer.org/installer | php
-            mv composer.phar /usr/local/bin/composer
+          # Install Composer
+          curl -sS https://getcomposer.org/installer | php
+          mv composer.phar /usr/local/bin/composer
 
-            # Apache Setup
-            systemctl start httpd
-            systemctl enable httpd
+          # Apache Setup
+          systemctl start httpd
+          systemctl enable httpd
 
-            cd /var/www/html
-            git clone https://github.com/Harydhk7/cakeshop-saas.git .
-            chown -R apache:apache /var/www/html
-            chmod -R 755 /var/www/html
+          cd /var/www/html
+          git clone https://github.com/Harydhk7/cakeshop-saas.git .
+          chown -R apache:apache /var/www/html
+          chmod -R 755 /var/www/html
 
-            # Generate a secret and creation date
-            SECRET=$(openssl rand -base64 32)
-            CREATION_DATE=$(date +%Y-%m-%d)
+          # Generate a secret and creation date
+          SECRET=$(openssl rand -base64 32)
+          CREATION_DATE=$(date +%Y-%m-%d)
 
-            # Create parameters.php with environment substitutions
-            cat > /var/www/html/src/app/config/parameters.php <<EOF
-            <?php
-            return [
-                'parameters' => [
-                    'database_host' => "${DBHost}",
-                    'database_port' => '',
-                    'database_name' => "${DBName}",
-                    'database_user' => "${DBUser}",
-                    'database_password' => "${DBPassword}",
-                    'database_prefix' => 'ps_',
-                    'database_engine' => 'InnoDB',
-                    'mailer_transport' => 'smtp',
-                    'mailer_host' => '127.0.0.1',
-                    'mailer_user' => null,
-                    'mailer_password' => null,
-                    'secret' => "$SECRET",
-                    'ps_caching' => 'CacheMemcache',
-                    'ps_cache_enable' => true,
-                    'ps_creation_date' => "$CREATION_DATE",
-                    'redis_host' => "${RedisHost}",
-                    'redis_port' => '6379',
-                ]
-            ];
-            EOF
+          # Create parameters.php with environment substitutions
+          cat > /var/www/html/src/app/config/parameters.php <<EOF
+          <?php
+          return [
+              'parameters' => [
+                  'database_host' => "${DBHost}",
+                  'database_port' => '',
+                  'database_name' => "${DBName}",
+                  'database_user' => "${DBUser}",
+                  'database_password' => "${DBPassword}",
+                  'database_prefix' => 'ps_',
+                  'database_engine' => 'InnoDB',
+                  'mailer_transport' => 'smtp',
+                  'mailer_host' => '127.0.0.1',
+                  'mailer_user' => null,
+                  'mailer_password' => null,
+                  'secret' => "$SECRET",
+                  'ps_caching' => 'CacheMemcache',
+                  'ps_cache_enable' => true,
+                  'ps_creation_date' => "$CREATION_DATE",
+                  'redis_host' => "${RedisHost}",
+                  'redis_port' => '6379',
+              ]
+          ];
+          EOF
 
-            # Create defines.inc.php for S3
-            cat > /var/www/html/src/config/defines.inc.php <<EOF
-            <?php
-            define('_PS_MEDIA_SERVER_1_', 'https://${S3Bucket}.s3.amazonaws.com');
-            define('_PS_MEDIA_SERVER_2_', 'https://${S3Bucket}.s3.amazonaws.com');
-            define('_PS_MEDIA_SERVER_3_', 'https://${S3Bucket}.s3.amazonaws.com');
-            EOF
+          # Create defines.inc.php for S3
+          cat > /var/www/html/src/config/defines.inc.php <<EOF
+          <?php
+          define('_PS_MEDIA_SERVER_1_', 'https://${S3Bucket}.s3.amazonaws.com');
+          define('_PS_MEDIA_SERVER_2_', 'https://${S3Bucket}.s3.amazonaws.com');
+          define('_PS_MEDIA_SERVER_3_', 'https://${S3Bucket}.s3.amazonaws.com');
+          EOF
 
-            systemctl restart httpd
+          systemctl restart httpd
 
-  WebServerAutoScalingGroup:
+  WebServerGroup:
     Type: AWS::AutoScaling::AutoScalingGroup
     Properties:
+      LaunchConfigurationName: !Ref WebServerLaunchConfig
       MinSize: 1
       MaxSize: 1
       DesiredCapacity: 1
-      LaunchTemplate:
-        LaunchTemplateName: !Ref WebServerLaunchTemplate
-        Version: 1
       AvailabilityZones:
         Fn::GetAZs: !Ref 'AWS::Region'
       Tags:
         - Key: Name
           Value: Cake Shop SaaS Web Server
           PropagateAtLaunch: true
-
-Outputs:
-  WebServerSecurityGroup:
-    Description: Security group for web servers
-    Value: !Ref WebServerSecurityGroup
-
-  AutoScalingGroup:
-    Description: Auto Scaling Group containing the web servers
-    Value: !Ref WebServerAutoScalingGroup
