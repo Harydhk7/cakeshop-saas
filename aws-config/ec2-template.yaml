@@ -1,3 +1,63 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Cake Shop SaaS EC2 Instance Template (Free Tier Eligible)'
+
+Parameters:
+  KeyName:
+    Description: Name of an existing EC2 KeyPair to enable SSH access to the instance
+    Type: AWS::EC2::KeyPair::KeyName
+    ConstraintDescription: must be the name of an existing EC2 KeyPair.
+
+  LatestAmiId:
+    Type: 'AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>'
+    Default: '/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2'
+    Description: The latest Amazon Linux 2 AMI from the Parameter Store
+
+  InstanceType:
+    Description: WebServer EC2 instance type
+    Type: String
+    Default: t2.micro
+    AllowedValues:
+      - t2.micro
+    ConstraintDescription: must be a valid EC2 instance type (t2.micro is free tier eligible).
+
+  SSHLocation:
+    Description: The IP address range that can be used to SSH to the EC2 instances
+    Type: String
+    MinLength: 9
+    MaxLength: 18
+    Default: 0.0.0.0/0
+    AllowedPattern: (\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})/(\d{1,2})
+    ConstraintDescription: must be a valid IP CIDR range of the form x.x.x.x/x.
+
+  DBHost:
+    Description: RDS endpoint
+    Type: String
+
+  DBName:
+    Description: Database name
+    Type: String
+    Default: cakeshop
+
+  DBUser:
+    Description: Database user
+    Type: String
+    Default: admin
+
+  DBPassword:
+    Description: Database password
+    Type: String
+    NoEcho: true
+
+  RedisHost:
+    Description: Redis host for caching (optional)
+    Type: String
+    Default: "none"
+
+  S3Bucket:
+    Description: S3 bucket for media storage
+    Type: String
+    Default: "cakeshop-media-unique"
+
 Resources:
   WebServerSecurityGroup:
     Type: AWS::EC2::SecurityGroup
@@ -23,7 +83,7 @@ Resources:
       ImageId: !Ref LatestAmiId
       InstanceType: !Ref InstanceType
       SecurityGroups:
-        - sg-07b438a9ad9d4469b  # Replace with the correct security group ID
+        - sg-07b438a9ad9d4469b  # Correct security group ID
       KeyName: !Ref KeyName
       UserData:
         Fn::Base64: !Sub |
@@ -101,3 +161,12 @@ Resources:
         - Key: Name
           Value: Cake Shop SaaS Web Server
           PropagateAtLaunch: true
+
+Outputs:
+  WebServerSecurityGroup:
+    Description: Security group for web servers
+    Value: !Ref WebServerSecurityGroup
+
+  AutoScalingGroup:
+    Description: Auto Scaling Group containing the web servers
+    Value: !Ref WebServerGroup
