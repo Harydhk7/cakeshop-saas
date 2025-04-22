@@ -61,8 +61,7 @@ jobs:
               DBPassword=${{ secrets.AWS_RDS_PASSWORD }} \
               RedisHost="none" \
               S3Bucket="cakeshop-media-$(date +%s)" \
-            --no-fail-on-empty-changeset  # Ensure this is properly placed here, not as part of the `aws` command.
-            # Remove '--capabilities CAPABILITY_IAM' if not needed or use alternatives.
+            # Removed --no-fail-on-empty-changeset
 
       - name: Retrieve EC2 instance public IP
         id: get_ip
