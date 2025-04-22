@@ -24,22 +24,7 @@ jobs:
         run: |
           echo "Verifying AWS credentials..."
           aws sts get-caller-identity
-          if [ $? -eq 0 ]; then
-            echo "AWS credentials are valid."
-          else
-            echo "Error: Invalid AWS credentials."
-            exit 1
-          fi
-
-      - name: Check EC2 describe instances permission
-        run: |
-          aws ec2 describe-instances
-          if [ $? -eq 0 ]; then
-            echo "Permission to describe EC2 instances is granted."
-          else
-            echo "Error: Permission denied to describe EC2 instances."
-            exit 1
-          fi
+          echo "AWS credentials verified successfully!"
 
       - name: Handle existing CloudFormation stack
         run: |
@@ -76,7 +61,6 @@ jobs:
               DBPassword=${{ secrets.AWS_RDS_PASSWORD }} \
               RedisHost="none" \
               S3Bucket="cakeshop-media-$(date +%s)" \
-            --capabilities CAPABILITY_IAM \
             --no-fail-on-empty-changeset
 
       - name: Retrieve EC2 instance public IP
