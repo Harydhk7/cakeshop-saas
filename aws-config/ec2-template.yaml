@@ -143,36 +143,35 @@ Resources:
           # Clone app
           cd /var/www/html
           git clone https://github.com/Harydhk7/cakeshop-saas.git .
-          
-          # Generate secure secret
-          SECRET=$(openssl rand -base64 32)
 
-          # Set permissions
-          chown -R apache:apache /var/www/html
-          chmod -R 755 /var/www/html
+SECRET=$(openssl rand -base64 32)
+export APP_SECRET="$SECRET"
 
-          # PrestaShop configuration
-          cat > /var/www/html/src/app/config/parameters.php << EOF
-          <?php
-          return [
-              'parameters' => [
-                  'database_host' => '${DBHost}',
-                  'database_port' => '${DBPort}',
-                  'database_name' => '${DBName}',
-                  'database_user' => '${DBUser}',
-                  'database_password' => '${DBPassword}',
-                  'database_prefix' => 'ps_',
-                  'database_engine' => 'InnoDB',
-                  'mailer_transport' => 'smtp',
-                  'mailer_host' => '127.0.0.1',
-                  'mailer_user' => null,
-                  'mailer_password' => null,
-                  'secret' => '${SECRET}',
-                  'ps_caching' => 'CacheMemcache',
-                  'ps_cache_enable' => true,
-                  'ps_creation_date' => '$(date +%Y-%m-%d)',
-                  'redis_host' => '${RedisHost}',
-                  'redis_port' => '6379',
+cat > /var/www/html/src/app/config/parameters.php << EOF
+<?php
+return [
+    'parameters' => [
+        'database_host' => '${DBHost}',
+        'database_port' => '${DBPort}',
+        'database_name' => '${DBName}',
+        'database_user' => '${DBUser}',
+        'database_password' => '${DBPassword}',
+        'database_prefix' => 'ps_',
+        'database_engine' => 'InnoDB',
+        'mailer_transport' => 'smtp',
+        'mailer_host' => '127.0.0.1',
+        'mailer_user' => null,
+        'mailer_password' => null,
+        'secret' => getenv('APP_SECRET') ?: 'changeme',
+        'ps_caching' => 'CacheMemcache',
+        'ps_cache_enable' => true,
+        'ps_creation_date' => '$(date +%Y-%m-%d)',
+        'redis_host' => '${RedisHost}',
+        'redis_port' => '6379',
+    ]
+];
+EOF
+
               ]
           ];
           EOF
