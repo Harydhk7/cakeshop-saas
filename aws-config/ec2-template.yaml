@@ -48,11 +48,6 @@ Parameters:
     Type: String
     NoEcho: true
 
-  DBPort:
-    Description: Database port
-    Type: String
-    Default: "3306"
-
   RedisHost:
     Description: Redis host for caching (optional)
     Type: String
@@ -67,7 +62,7 @@ Resources:
   WebServerSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: Enable HTTP, HTTPS, and SSH access
+      GroupDescription: Enable HTTP and SSH access
       SecurityGroupIngress:
         - IpProtocol: tcp
           FromPort: 80
@@ -81,37 +76,6 @@ Resources:
           FromPort: 22
           ToPort: 22
           CidrIp: !Ref SSHLocation
-      SecurityGroupEgress:
-        - IpProtocol: -1
-          CidrIp: 0.0.0.0/0
-
-  WebServerRole:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Version: "2012-10-17"
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service: ec2.amazonaws.com
-            Action: sts:AssumeRole
-      Path: "/"
-      Policies:
-        - PolicyName: S3Access
-          PolicyDocument:
-            Version: "2012-10-17"
-            Statement:
-              - Effect: Allow
-                Action:
-                  - s3:GetObject
-                  - s3:PutObject
-                Resource: !Sub "arn:aws:s3:::${S3Bucket}/*"
-
-  WebServerInstanceProfile:
-    Type: AWS::IAM::InstanceProfile
-    Properties:
-      Roles:
-        - !Ref WebServerRole
 
   WebServerLaunchConfig:
     Type: AWS::AutoScaling::LaunchConfiguration
@@ -121,13 +85,12 @@ Resources:
       SecurityGroups:
         - !Ref WebServerSecurityGroup
       KeyName: !Ref KeyName
-      IamInstanceProfile: !Ref WebServerInstanceProfile
       UserData:
         Fn::Base64: !Sub |
           #!/bin/bash -xe
           yum update -y
           amazon-linux-extras install -y lamp-mariadb10.2-php7.4 php7.4
-          yum install -y httpd git unzip
+          yum install -y httpd git
 
           # Install PHP extensions
           yum install -y php-gd php-mbstring php-xml php-curl php-zip php-intl php-bcmath php-json php-mysql
@@ -136,55 +99,53 @@ Resources:
           curl -sS https://getcomposer.org/installer | php
           mv composer.phar /usr/local/bin/composer
 
-          # Start Apache
+          # Apache Setup
           systemctl start httpd
           systemctl enable httpd
 
-          # Clone app
           cd /var/www/html
           git clone https://github.com/Harydhk7/cakeshop-saas.git .
+          chown -R apache:apache /var/www/html
+          chmod -R 755 /var/www/html
 
-SECRET=$(openssl rand -base64 32)
-export APP_SECRET="$SECRET"
+          # Generate a secret and creation date
+          SECRET=$(openssl rand -base64 32)
+          CREATION_DATE=$(date +%Y-%m-%d)
 
-cat > /var/www/html/src/app/config/parameters.php << EOF
-<?php
-return [
-    'parameters' => [
-        'database_host' => '${DBHost}',
-        'database_port' => '${DBPort}',
-        'database_name' => '${DBName}',
-        'database_user' => '${DBUser}',
-        'database_password' => '${DBPassword}',
-        'database_prefix' => 'ps_',
-        'database_engine' => 'InnoDB',
-        'mailer_transport' => 'smtp',
-        'mailer_host' => '127.0.0.1',
-        'mailer_user' => null,
-        'mailer_password' => null,
-        'secret' => getenv('APP_SECRET') ?: 'changeme',
-        'ps_caching' => 'CacheMemcache',
-        'ps_cache_enable' => true,
-        'ps_creation_date' => '$(date +%Y-%m-%d)',
-        'redis_host' => '${RedisHost}',
-        'redis_port' => '6379',
-    ]
-];
-EOF
-
+          # Create parameters.php with environment substitutions
+          cat > /var/www/html/src/app/config/parameters.php <<EOF
+          <?php
+          return [
+              'parameters' => [
+                  'database_host' => "${DBHost}",
+                  'database_port' => '',
+                  'database_name' => "${DBName}",
+                  'database_user' => "${DBUser}",
+                  'database_password' => "${DBPassword}",
+                  'database_prefix' => 'ps_',
+                  'database_engine' => 'InnoDB',
+                  'mailer_transport' => 'smtp',
+                  'mailer_host' => '127.0.0.1',
+                  'mailer_user' => null,
+                  'mailer_password' => null,
+                  'secret' => "$SECRET",
+                  'ps_caching' => 'CacheMemcache',
+                  'ps_cache_enable' => true,
+                  'ps_creation_date' => "$CREATION_DATE",
+                  'redis_host' => "${RedisHost}",
+                  'redis_port' => '6379',
               ]
           ];
           EOF
 
-          # S3 media configuration
-          cat > /var/www/html/src/config/defines.inc.php << EOF
+          # Create defines.inc.php for S3
+          cat > /var/www/html/src/config/defines.inc.php <<EOF
           <?php
           define('_PS_MEDIA_SERVER_1_', 'https://${S3Bucket}.s3.amazonaws.com');
           define('_PS_MEDIA_SERVER_2_', 'https://${S3Bucket}.s3.amazonaws.com');
           define('_PS_MEDIA_SERVER_3_', 'https://${S3Bucket}.s3.amazonaws.com');
           EOF
 
-          # Restart Apache
           systemctl restart httpd
 
   WebServerGroup:
@@ -194,8 +155,8 @@ EOF
       MinSize: 1
       MaxSize: 1
       DesiredCapacity: 1
-      AvailabilityZones: !GetAZs 
-        Ref: AWS::Region
+      AvailabilityZones:
+        Fn::GetAZs: !Ref 'AWS::Region'
       Tags:
         - Key: Name
           Value: Cake Shop SaaS Web Server
