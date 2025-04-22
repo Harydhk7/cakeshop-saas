@@ -48,6 +48,11 @@ Parameters:
     Type: String
     NoEcho: true
 
+  DBPort:
+    Description: Database port
+    Type: String
+    Default: "3306"
+
   RedisHost:
     Description: Redis host for caching (optional)
     Type: String
@@ -62,7 +67,7 @@ Resources:
   WebServerSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: Enable HTTP and SSH access
+      GroupDescription: Enable HTTP, HTTPS, and SSH access
       SecurityGroupIngress:
         - IpProtocol: tcp
           FromPort: 80
@@ -76,48 +81,83 @@ Resources:
           FromPort: 22
           ToPort: 22
           CidrIp: !Ref SSHLocation
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+
+  WebServerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      Path: "/"
+      Policies:
+        - PolicyName: S3Access
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:PutObject
+                Resource: !Sub "arn:aws:s3:::${S3Bucket}/*"
+
+  WebServerInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles:
+        - !Ref WebServerRole
 
   WebServerLaunchConfig:
     Type: AWS::AutoScaling::LaunchConfiguration
     Properties:
-      ImageId: !Ref LatestAmiId  # Latest Amazon Linux 2 AMI from Parameter Store
+      ImageId: !Ref LatestAmiId
       InstanceType: !Ref InstanceType
       SecurityGroups:
         - !Ref WebServerSecurityGroup
       KeyName: !Ref KeyName
+      IamInstanceProfile: !Ref WebServerInstanceProfile
       UserData:
         Fn::Base64: !Sub |
           #!/bin/bash -xe
           yum update -y
           amazon-linux-extras install -y lamp-mariadb10.2-php7.4 php7.4
-          yum install -y httpd git
+          yum install -y httpd git unzip
 
-          # Install PHP extensions required by PrestaShop
+          # Install PHP extensions
           yum install -y php-gd php-mbstring php-xml php-curl php-zip php-intl php-bcmath php-json php-mysql
 
           # Install Composer
           curl -sS https://getcomposer.org/installer | php
           mv composer.phar /usr/local/bin/composer
 
-          # Configure Apache
+          # Start Apache
           systemctl start httpd
           systemctl enable httpd
 
-          # Clone Cake Shop repository
+          # Clone app
           cd /var/www/html
           git clone https://github.com/Harydhk7/cakeshop-saas.git .
+          
+          # Generate secure secret
+          SECRET=$(openssl rand -base64 32)
 
           # Set permissions
           chown -R apache:apache /var/www/html
           chmod -R 755 /var/www/html
 
-          # Configure PrestaShop
-          cat > /var/www/html/src/app/config/parameters.php << 'EOF'
+          # PrestaShop configuration
+          cat > /var/www/html/src/app/config/parameters.php << EOF
           <?php
           return [
               'parameters' => [
                   'database_host' => '${DBHost}',
-                  'database_port' => '',
+                  'database_port' => '${DBPort}',
                   'database_name' => '${DBName}',
                   'database_user' => '${DBUser}',
                   'database_password' => '${DBPassword}',
@@ -127,7 +167,7 @@ Resources:
                   'mailer_host' => '127.0.0.1',
                   'mailer_user' => null,
                   'mailer_password' => null,
-                  'secret' => '$(openssl rand -base64 32)',
+                  'secret' => '${SECRET}',
                   'ps_caching' => 'CacheMemcache',
                   'ps_cache_enable' => true,
                   'ps_creation_date' => '$(date +%Y-%m-%d)',
@@ -137,10 +177,9 @@ Resources:
           ];
           EOF
 
-          # Configure S3 for media storage
-          cat > /var/www/html/src/config/defines.inc.php << 'EOF'
+          # S3 media configuration
+          cat > /var/www/html/src/config/defines.inc.php << EOF
           <?php
-          /* Custom S3 configuration */
           define('_PS_MEDIA_SERVER_1_', 'https://${S3Bucket}.s3.amazonaws.com');
           define('_PS_MEDIA_SERVER_2_', 'https://${S3Bucket}.s3.amazonaws.com');
           define('_PS_MEDIA_SERVER_3_', 'https://${S3Bucket}.s3.amazonaws.com');
@@ -156,8 +195,8 @@ Resources:
       MinSize: 1
       MaxSize: 1
       DesiredCapacity: 1
-      AvailabilityZones:
-        Fn::GetAZs: !Ref 'AWS::Region'
+      AvailabilityZones: !GetAZs 
+        Ref: AWS::Region
       Tags:
         - Key: Name
           Value: Cake Shop SaaS Web Server
