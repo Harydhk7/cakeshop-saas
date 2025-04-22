@@ -77,12 +77,12 @@ Resources:
           ToPort: 22
           CidrIp: !Ref SSHLocation
 
-  WebServerLaunchConfig:
-    Type: AWS::AutoScaling::LaunchConfiguration
+  WebServerInstance:
+    Type: AWS::EC2::Instance
     Properties:
       ImageId: !Ref LatestAmiId
       InstanceType: !Ref InstanceType
-      SecurityGroups:
+      SecurityGroupIds:
         - sg-07b438a9ad9d4469b  # Correct security group ID
       KeyName: !Ref KeyName
       UserData:
@@ -148,25 +148,11 @@ Resources:
 
           systemctl restart httpd
 
-  WebServerGroup:
-    Type: AWS::AutoScaling::AutoScalingGroup
-    Properties:
-      LaunchConfigurationName: !Ref WebServerLaunchConfig
-      MinSize: 1
-      MaxSize: 1
-      DesiredCapacity: 1
-      AvailabilityZones:
-        Fn::GetAZs: !Ref 'AWS::Region'
-      Tags:
-        - Key: Name
-          Value: Cake Shop SaaS Web Server
-          PropagateAtLaunch: true
-
 Outputs:
   WebServerSecurityGroup:
     Description: Security group for web servers
     Value: !Ref WebServerSecurityGroup
 
-  AutoScalingGroup:
-    Description: Auto Scaling Group containing the web servers
-    Value: !Ref WebServerGroup
+  WebServerInstance:
+    Description: EC2 instance for the web server
+    Value: !Ref WebServerInstance
