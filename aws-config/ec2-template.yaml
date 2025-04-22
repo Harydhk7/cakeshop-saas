@@ -83,36 +83,104 @@ Resources:
       ImageId: !Ref LatestAmiId
       InstanceType: !Ref InstanceType
       SecurityGroupIds:
-        - sg-0f34646da29709a1b  # Correct security group ID
+        - !Ref WebServerSecurityGroup
       KeyName: !Ref KeyName
       UserData:
         Fn::Base64: !Sub |
           #!/bin/bash -xe
-          yum update -y
-          amazon-linux-extras install -y lamp-mariadb10.2-php7.4 php7.4
-          yum install -y httpd git
 
-          # Install PHP extensions
-          yum install -y php-gd php-mbstring php-xml php-curl php-zip php-intl php-bcmath php-json php-mysql
+          # Create a log file for debugging
+          exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
 
-          # Install Composer
-          curl -sS https://getcomposer.org/installer | php
-          mv composer.phar /usr/local/bin/composer
+          echo "Starting user data script execution..."
 
-          # Apache Setup
+          # Determine OS version
+          if grep -q "Amazon Linux release 2023" /etc/os-release; then
+            echo "Detected Amazon Linux 2023"
+            # Amazon Linux 2023 commands
+            dnf update -y
+            dnf install -y httpd git
+            dnf install -y php php-gd php-mbstring php-xml php-curl php-zip php-intl php-bcmath php-json php-mysqlnd
+          else
+            echo "Detected Amazon Linux 2"
+            # Amazon Linux 2 commands
+            yum update -y
+            amazon-linux-extras enable php7.4
+            yum install -y httpd git
+            yum install -y php php-gd php-mbstring php-xml php-curl php-zip php-intl php-bcmath php-json php-mysqlnd
+          fi
+
+          # Check if Apache was installed successfully
+          if ! command -v httpd &> /dev/null; then
+            echo "ERROR: Apache (httpd) installation failed!"
+            exit 1
+          fi
+
+          # Create web directory if it doesn't exist
+          echo "Creating web directory..."
+          mkdir -p /var/www/html
+
+          # Start and enable Apache
+          echo "Starting and enabling Apache..."
           systemctl start httpd
           systemctl enable httpd
 
+          # Check if Apache is running
+          if ! systemctl is-active --quiet httpd; then
+            echo "ERROR: Apache (httpd) failed to start!"
+            systemctl status httpd
+            exit 1
+          fi
+
+          # Clone the repository
+          echo "Cloning the repository..."
           cd /var/www/html
           git clone https://github.com/Harydhk7/cakeshop-saas.git .
+
+          # Check if the repository was cloned successfully
+          if [ $? -ne 0 ]; then
+            echo "ERROR: Failed to clone the repository!"
+            exit 1
+          fi
+
+          # Set proper permissions
+          echo "Setting permissions..."
           chown -R apache:apache /var/www/html
           chmod -R 755 /var/www/html
 
+          # Create a simple index.html file to test the web server
+          echo "Creating test index.html..."
+          cat > /var/www/html/index.html <<EOF
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <title>Cake Shop SaaS</title>
+            <style>
+              body { font-family: Arial, sans-serif; text-align: center; margin-top: 50px; }
+              h1 { color: #F8BBD0; }
+              p { color: #795548; }
+            </style>
+          </head>
+          <body>
+            <h1>Cake Shop SaaS</h1>
+            <p>The server is running successfully!</p>
+            <p>PrestaShop installation will be available soon.</p>
+          </body>
+          </html>
+          EOF
+
+          # Create necessary directories for PrestaShop
+          echo "Creating PrestaShop directories..."
+          mkdir -p /var/www/html/src/app/config
+          mkdir -p /var/www/html/src/config
+
           # Generate a secret and creation date
+          echo "Generating secret and creation date..."
           SECRET=$(openssl rand -base64 32)
           CREATION_DATE=$(date +%Y-%m-%d)
 
           # Create parameters.php with environment substitutions
+          echo "Creating parameters.php..."
           cat > /var/www/html/src/app/config/parameters.php <<EOF
           <?php
           return [
@@ -139,6 +207,7 @@ Resources:
           EOF
 
           # Create defines.inc.php for S3
+          echo "Creating defines.inc.php..."
           cat > /var/www/html/src/config/defines.inc.php <<EOF
           <?php
           define('_PS_MEDIA_SERVER_1_', 'https://${S3Bucket}.s3.amazonaws.com');
@@ -146,7 +215,20 @@ Resources:
           define('_PS_MEDIA_SERVER_3_', 'https://${S3Bucket}.s3.amazonaws.com');
           EOF
 
+          # Restart Apache
+          echo "Restarting Apache..."
           systemctl restart httpd
+
+          # Final check
+          if systemctl is-active --quiet httpd; then
+            echo "SUCCESS: Apache is running and the server is ready!"
+          else
+            echo "ERROR: Apache is not running after setup!"
+            systemctl status httpd
+            exit 1
+          fi
+
+          echo "User data script execution completed successfully!"
 
 Outputs:
   WebServerSecurityGroup:
